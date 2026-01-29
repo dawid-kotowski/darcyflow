@@ -4,7 +4,7 @@
 #ifndef DUNE_DARCYFLOW_DARCYVELOCITY_DARCYPROBLEM_HH
 #define DUNE_DARCYFLOW_DARCYVELOCITY_DARCYPROBLEM_HH
 
-#include "dune/pdelab.hh"
+#include <dune/pdelab.hh>
 
 /**
    Pressure gradient from top left to bottom right with a horizontal
@@ -22,7 +22,7 @@ public:
   using Traits = typename Base::Traits;
 
   DarcyProblem(Dune::ParameterTree& pTree) : Base(),
-    pTree_(pTree), I(0.0),
+    pTree_(pTree), I_(0.0),
     minPerm_(pTree_.get<RF>("darcy.minPermeability")),
     coatingPerm_(pTree_.get<RF>("darcy.coatingPermeability")),
     openingHeight_(pTree_.get<RF>("problem.openingHeight")),
@@ -52,9 +52,9 @@ public:
     const auto& global = el.geometry().center();
 
     using std::abs;
-    if (abs(global[1] - 0.5) < halfReactionBlockHeight_ + tol)
+    if (abs(global[1] - 0.5) < halfReactionBlockHeight_ + tol_)
       return minPerm_ * I_;
-    else if (abs(global[1] - 0.5) < halfReactionBlockHeight_ + coatingHeight_ + tol)
+    else if (abs(global[1] - 0.5) < halfReactionBlockHeight_ + coatingHeight_ + tol_)
       return coatingPerm_ * I_;
     else
       return I_;
@@ -85,26 +85,20 @@ public:
 
     using std::abs;
     Vec ret(0.0);
-    if ((global[0] < tol and global[1] > 1-openingHeight_ - tol)) {
+    if ((global[0] < tol_ and global[1] > 1-openingHeight_ - tol_)) {
       const auto& radius = abs(global[1] - (1-0.5*openingHeight_));
       ret = profile(radius);
     }
-    else if ((global[0] > 1-tol and global[1] < openingHeight_ + tol)) {
+    else if ((global[0] > 1-tol_ and global[1] < openingHeight_ + tol_)) {
       const auto& radius = abs(global[1] - (0.5*openingHeight_));
       ret = profile(radius);
     }
 
-    if constexpr (bc == BoundaryConditionType::mixed)
-      return ret;
-    else if constexpr (bc == BoundaryConditionType::pressure)
-      return ret.dot(is.unitOuterNormal(x));
-    else {
-      DUNE_THROW(Dune::RangeError, "CatalysatorProblem: unknown BoundaryConditionType");
-      return -1;
-    }
+    return ret;
   }
 
 private:
+  const int tol_ = 1e-10;
   typename Dune::ParameterTree& pTree_;
   typename Traits::PermTensorType I_;
   const RF minPerm_;

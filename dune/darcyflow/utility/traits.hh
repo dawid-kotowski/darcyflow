@@ -19,11 +19,11 @@ struct DarcyTraits
   using VBE = Dune::PDELab::ISTL::VectorBackend<>;
 
   static const int order_rt = 0;
-  using FEM = Dune::PDELab::LocalFiniteElementMap<GV,DF,RF, order_rt>;
+  using FEM = Dune::PDELab::RTLocalFiniteElementMap<GV,DomainField,RangeField, order_rt>;
   using ConstraintsType = Dune::PDELab::RT0Constraints;
-  using GFS = Dune::PDELab::GridFunctionSpace<GV,FEM,RT0CON,VBE>;
-  using VectorType = Dune::PDELab::Backend::Vector<GridFunctionSpace, DF>;
-  using DiscreteGridFunction = Dune::PDELab::DiscreteGridFunctionPiola<GridFunctionSpace, CoefficientVector>;
+  using GFS = Dune::PDELab::GridFunctionSpace<GV,FEM,ConstraintsType,VBE>;
+  using VectorType = Dune::PDELab::Backend::Vector<GFS, RangeField>;
+  using DiscreteGridFunction = Dune::PDELab::DiscreteGridFunctionPiola<GFS, VectorType>;
 };
 
 /**
@@ -41,11 +41,11 @@ struct DGTraits
   using VBE = Dune::PDELab::ISTL::VectorBackend<>;
 
   static const int order_dg = 0;
-  using FEM = Dune::PDELab::QkDGLocalFiniteElementMap<DF,RF,order_dg, dim, Dune::PDELab::QkDGBasisPolynomial::lagrange>;
+  using FEM = Dune::PDELab::QkDGLocalFiniteElementMap<DomainField,RangeField,order_dg, dim, Dune::PDELab::QkDGBasisPolynomial::lagrange>;
   using ConstraintsType = Dune::PDELab::NoConstraints;
   using GFS = Dune::PDELab::GridFunctionSpace<GV,FEM,ConstraintsType,VBE>;
-  using VectorType = Dune::PDELab::Backend::Vector<GridFunctionSpace, DF>;
-  using DiscreteGridFunction = Dune::PDELab::DiscreteGridFunctionPiola<GridFunctionSpace, CoefficientVector>;
+  using VectorType = Dune::PDELab::Backend::Vector<GFS, DomainField>;
+  using DiscreteGridFunction = Dune::PDELab::DiscreteGridFunctionPiola<GFS, VectorType>;
 };
 
 #endif // DUNE_DARCYFLOW_UTILITY_TRAITS_HH

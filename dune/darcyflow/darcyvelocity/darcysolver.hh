@@ -6,12 +6,12 @@
 
 #include <dune/pdelab.hh>
 
-#include "darcyproblem.hh"
-#include "constraints.hh"
-#include "masslumping.hh"
-#include "reconstruction.hh"
-#include "schurcomplement.hh"
-#include "dune/darcyflow/utility/traits.hh"
+#include <dune/darcyflow/darcyvelocity/darcyproblem.hh>
+#include <dune/darcyflow/darcyvelocity/constraints.hh>
+#include <dune/darcyflow/darcyvelocity/masslumping.hh>
+#include <dune/darcyflow/darcyvelocity/reconstruction.hh>
+#include <dune/darcyflow/darcyvelocity/schurcomplement.hh>
+#include <dune/darcyflow/utility/traits.hh>
 
 /**
  * \brief Darcy Solver using a mixed formulation
@@ -47,7 +47,7 @@ private:
     using TensorVBE = Dune::PDELab::ISTL::VectorBackend<Dune::PDELab::ISTL::Blocking::bcrs>;
     using TensorGFS = Dune::PDELab::CompositeGridFunctionSpace<
                       TensorVBE, Dune::PDELab::LexicographicOrderingTag,
-                      typename DarcyTraits::GridFunctionSpace,DGGFS>;
+                      typename DarcyTraits::GFS,DGGFS>;
 
 public:
     DarcySolver(const GV& gv, Problem& problem, Dune::ParameterTree& pTree)
@@ -114,7 +114,7 @@ public:
 
         // build dirichlet containers
         const auto flowFunction = [this](const auto& is, const auto& x) { 
-          return problem.j(is, x); 
+          return problem_.j(is, x); 
         };
         const auto neutralFunction = [](const auto& x) { return 0.0; };
         auto darcyDirichlet = Dune::PDELab::makeGridFunctionFromCallable(gv_, flowFunction);
@@ -179,9 +179,9 @@ public:
         const int coarsenTarget = 2000;
         Dune::Amg::Parameters amgParams(maxAmgIterations, coarsenTarget);
 
-        using Criterion = typename Dune::Amg::CoarsenCriterion<
-                          typename Dune::Amg::SymmetricCriterion<LumpedMatrixType>, 
-                          typename Dune::Amg::FirstDiagonal >;
+        using Criterion = Dune::Amg::CoarsenCriterion<
+                          Dune::Amg::SymmetricCriterion<LumpedMatrixType, 
+                          Dune::Amg::FirstDiagonal >>;
         Criterion criterion(amgParams);
 
         auto dgPrec = std::make_shared<AMG>(*approxDarcyOperator, criterion, smootherArgs);
@@ -236,22 +236,22 @@ public:
 
     void writeVTK(std::string filename = "darcySolution") const {
       using VTKWriter = Dune::SubsamplingVTKWriter<GV>;
-      Dune::RefinementIntervals subsampling(pTree.template get<double>("visualization.subsamplingVelocity"));
+      Dune::RefinementIntervals subsampling(pTree_.template get<double>("visualization.subsamplingVelocity"));
       VTKWriter vtkwriter(gv_, subsampling);
       std::string vtkfile(filename);
 
       // plot velocity
-      auto darcydgf = this->getDiscreteGridFunction();
-      using RT0_VTKF = Dune::PDELab::VTKGridFunctionAdapter<typename Traits::DiscreteGridFunction>;
-      vtkwriter.addCellData(std::make_shared<RT0_VTKF>(darcydgf, "Velocity"));
+      DarcyDGF darcydgf(darcygfs_, darcyCoefficients_);
+      using DarcyVTK = Dune::PDELab::VTKGridFunctionAdapter<DarcyDGF>;
+      vtkwriter.addCellData(std::make_shared<DarcyVTK>(darcydgf, "Velocity"));
 
       // plot pressure
       DGDGF dgdgf(dggfs_, dgCoefficients_);
-      using DG_VTKF = Dune::PDELab::VTKGridFunctionAdapter<DGFDG>;
-      vtkwriter.addCellData(std::make_shared<DG_VTKF>(dgdgf, "Pressure"));
+      using DGVTK = Dune::PDELab::VTKGridFunctionAdapter<DGDGF>;
+      vtkwriter.addCellData(std::make_shared<DGVTK>(dgdgf, "Pressure"));
 
       // plot permeability field
-      auto lambda = [this](const auto& el, const auto& x){ return this->problem.A(el, x)[0][0]; };
+      auto lambda = [this](const auto& el, const auto& x){ return this->problem_.A(el, x)[0][0]; };
       auto amag = Dune::PDELab::makeGridFunctionFromCallable(gv_,lambda);
       using VTKGridFunctionAdapter = Dune::PDELab::VTKGridFunctionAdapter<decltype(amag)>;
       vtkwriter.addCellData(std::make_shared<VTKGridFunctionAdapter>(amag, "Permeability"));

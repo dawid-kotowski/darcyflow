@@ -1,2 +1,4 @@
-#install headers
-install(FILES darcyflow.hh DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/darcyflow)
+add_subdirectory(darcyvelocity)
+add_subdirectory(test)
+add_subdirectory(transport)
+add_subdirectory(utility)

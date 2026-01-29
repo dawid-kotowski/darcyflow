@@ -15,11 +15,10 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules"
 #include the dune macros
 include(DuneMacros)
 
-# deactivate global include-directories (old versions of dune used to need the OLD policy to work)
-dune_policy(SET DP_DEFAULT_INCLUDE_DIRS NEW)
-
 # start a dune project with information from dune.module
 dune_project()
+
+dune_enable_all_packages()
 
 add_subdirectory(src)
 add_subdirectory(dune)
@@ -27,4 +26,4 @@ add_subdirectory(doc)
 add_subdirectory(cmake/modules)
 
 # finalize the dune project, e.g. generating config.h etc.
-finalize_dune_project()
+finalize_dune_project(GENERATE_CONFIG_H_CMAKE)

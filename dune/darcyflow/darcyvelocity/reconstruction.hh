@@ -12,7 +12,7 @@ public:
   using field_type = typename Y::field_type;
 
   Reconstruction(Dune::InverseOperator<X,X>& invOp, const MatrixType& mat,
-                 const int pm) : invOp_(invOP), mat_(mat), pm_(pm)
+                 const int pm) : invOp_(invOp), mat_(mat), pm_(pm)
                  {
                     X tmp(mat.N());
                     tmp = 0.0;
