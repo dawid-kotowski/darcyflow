@@ -19,7 +19,7 @@ struct DarcyTraits
   using VBE = Dune::PDELab::ISTL::VectorBackend<>;
 
   static const int order_rt = 0;
-  using FEM = Dune::PDELab::RTLocalFiniteElementMap<GV,DomainField,RangeField, order_rt>;
+  using FEM = Dune::PDELab::RaviartThomasLocalFiniteElementMap<GV,DomainField,RangeField, order_rt>;
   using ConstraintsType = Dune::PDELab::RT0Constraints;
   using GFS = Dune::PDELab::GridFunctionSpace<GV,FEM,ConstraintsType,VBE>;
   using VectorType = Dune::PDELab::Backend::Vector<GFS, RangeField>;

@@ -43,7 +43,7 @@ public:
   }
 
   std::shared_ptr<X> getReconstructionVector() const {
-    return std::make_shared<X>(mat_.N());
+    return std::make_shared<X>(rhsX_.size());
   }
 
   Dune::SolverCategory::Category category() const {

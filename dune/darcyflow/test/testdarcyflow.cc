@@ -37,7 +37,7 @@ int main(int argc, char** argv)
     // setup darcy solver
     using GV = Grid::LeafGridView;
     using DarcyProblemType = DarcyProblem<GV, RF>;
-    const DarcyProblemType darcyProblem(pTree);
+    DarcyProblemType darcyProblem(pTree);
     using DarcySolver = DarcySolver<GV, DarcyProblemType>;
     DarcySolver darcySolver(grid->leafGridView(), darcyProblem, pTree);
     darcySolver.solve();

@@ -36,7 +36,7 @@ private:
 public:
     TransportSolver(const GV& gv, Problem& problem, Dune::ParameterTree& pTree)
       : gv_(gv), problem_(problem), pTree_(pTree),
-        dgfem_(gv_), dggfs_(gv_, dgfem_), solveflag_(false)
+        dgfem_(), dggfs_(gv_, dgfem_), solveflag_(false)
     {
         dggfs_.name("DGTransport");
     }
