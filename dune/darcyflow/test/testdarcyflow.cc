@@ -28,8 +28,6 @@ int main(int argc, char** argv)
     using Grid = typename Dune::YaspGrid<dim>;
     Dune::FieldVector<double, dim> domain(1.0);
     std::array<int, dim> domainDims;
-    domain[0] = 1.0;
-    domain[1] = 1.0;
     domainDims[0] = pTree.get<int>("grid.yasp_x");
     domainDims[1] = pTree.get<int>("grid.yasp_y");
     auto grid = std::make_shared<Grid>(domain, domainDims);

@@ -36,17 +36,34 @@ private:
 public:
     TransportSolver(const GV& gv, Problem& problem, Dune::ParameterTree& pTree)
       : gv_(gv), problem_(problem), pTree_(pTree),
-        dgfem_(), dggfs_(gv_, dgfem_), solveflag_(false)
+        dgfem_(), dggfs_(gv_, dgfem_)
     {
         dggfs_.name("DGTransport");
     }
 
+    void logger(std::string message, Dune::Timer& timer, const int verbose = 0)
+    {
+        double time = timer.elapsed();
+        if (!verbose == 0 )
+        {
+            std::cout << "(clock:"
+            << time << ") === Transport Process Info === " << message << std::endl;
+        }
+    }
+
     void solve()
     {
+        // logger setup
+        const int processVerb = 1;
+        Dune::Timer timer;
+        timer.start();
+
         // stationary local operator setup
+        logger(std::string("Starting Transport Problem assembly ..."), timer, processVerb);
         using RhsLocalOperator = Dune::PDELab::ConvectionDiffusionDG<Problem,
                                                                   typename DGTraits::FEM>;
-        RhsLocalOperator rhslop(problem_, 0.0);
+        RhsLocalOperator rhslop(problem_, Dune::PDELab::ConvectionDiffusionDGMethod::IIPG,
+                                 Dune::PDELab::ConvectionDiffusionDGWeights::weightsOff, 0.0);
 
         // mass local operator setup
         using LhsLocalOperator = Dune::PDELab::L2;
@@ -55,6 +72,9 @@ public:
         // constraints setup
         DGConstraints cc;
         cc.clear();
+
+        // grid function init
+        dggfs_.update();
 
         // matrix setup
         const int upperDofBound = std::pow(2, dim_) * dggfs_.maxLocalSize();
@@ -101,8 +121,10 @@ public:
         Dune::PDELab::ImplicitEulerParameter<RF> method;
         Dune::PDELab::OneStepMethod<RF, FullGO, PDESolver, V, V> osm(method, go, pdesolver);
         osm.setVerbosityLevel(1);
+        logger(std::string("Assembled Problem."), timer, processVerb);
 
         // time stepping
+        logger(std::string("Starting Time Solver Loop ..."), timer, processVerb);
         double time = pTree_.get<double>("time.time");
         double dt = pTree_.get<double>("time.dt");
         double T = pTree_.get<double>("time.T");
@@ -115,15 +137,21 @@ public:
             // increment
             solutionTrajectory_.push_back(vNew);
             vOld = vNew;
+            time += dt;
+
+            // assemble constraints for new time step
+            problem_.setTime(time);
+            Dune::PDELab::constraints(g, dggfs_, cc);
         }
-        solveflag_ = true;
+        logger(std::string("Computed Time Trajectory. Saved Solution."), timer, processVerb);
+        double _ = timer.stop();
     }
 
     void writeVTK(std::string filename = "transportdgsolution")
     {
         // assertion for solver
         // warning: the time scaling should NEVER be subject to change in the pTree during compute
-        if (!solveflag_)
+        if (solutionTrajectory_.empty())
             DUNE_THROW(Dune::Exception, "Run the solver first!");
 
         // vtk setup
@@ -131,7 +159,8 @@ public:
         Dune::RefinementIntervals subsampling(pTree_.get<double>("visualization.subsamplingDG"));
         auto stationaryVTKWriter = std::make_shared<SVTKWriter>(gv_, subsampling);
         using VTKWriter = Dune::VTKSequenceWriter<GV>;
-        VTKWriter vtkwriter(stationaryVTKWriter, "transportdgsolution", "", "");
+        std::string vtkfile(filename);
+        VTKWriter vtkwriter(stationaryVTKWriter, vtkfile);
         DGVector solutionCoefficients(dggfs_, 0.0);
         DGDGF solution(dggfs_, solutionCoefficients);
         using VTKGridAdapter = Dune::PDELab::VTKGridFunctionAdapter<DGDGF>;
@@ -141,7 +170,7 @@ public:
         double time = pTree_.get<double>("time.time");
         double dt = pTree_.get<double>("time.dt");
         double T = pTree_.get<double>("time.T");
-        for (int timeStep = 0 ; timeStep < solutionTrajectory_.size() ; ++timeStep )
+        for (std::size_t timeStep = 0 ; timeStep < solutionTrajectory_.size() ; ++timeStep )
         {
             solutionCoefficients = solutionTrajectory_[timeStep];
             vtkwriter.write(time, Dune::VTK::appendedraw);
@@ -157,7 +186,6 @@ private:
     DGFEM dgfem_;
     DGGFS dggfs_;
     std::vector<DGVector> solutionTrajectory_;
-    bool solveflag_;
 };
 
 #endif // DUNE_DARCYFLOW_TRANSPORTSOLVER_HH

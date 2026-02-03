@@ -20,8 +20,8 @@ struct DarcyTraits
 
   static const int order_rt = 0;
   using FEM = Dune::PDELab::RaviartThomasLocalFiniteElementMap<GV,DomainField,RangeField, order_rt>;
-  using ConstraintsType = Dune::PDELab::RT0Constraints;
-  using GFS = Dune::PDELab::GridFunctionSpace<GV,FEM,ConstraintsType,VBE>;
+  using GFS = Dune::PDELab::GridFunctionSpace<GV,FEM,Dune::PDELab::RT0Constraints,VBE>;
+  using ConstraintsType = typename GFS::template ConstraintsContainer<RangeField>::Type;
   using VectorType = Dune::PDELab::Backend::Vector<GFS, RangeField>;
   using DiscreteGridFunction = Dune::PDELab::DiscreteGridFunctionPiola<GFS, VectorType>;
 };
@@ -42,10 +42,10 @@ struct DGTraits
 
   static const int order_dg = 0;
   using FEM = Dune::PDELab::QkDGLocalFiniteElementMap<DomainField,RangeField,order_dg, dim, Dune::PDELab::QkDGBasisPolynomial::lagrange>;
-  using ConstraintsType = Dune::PDELab::NoConstraints;
-  using GFS = Dune::PDELab::GridFunctionSpace<GV,FEM,ConstraintsType,VBE>;
+  using GFS = Dune::PDELab::GridFunctionSpace<GV,FEM,Dune::PDELab::NoConstraints,VBE>;
+  using ConstraintsType = typename GFS::template ConstraintsContainer<RangeField>::Type;
   using VectorType = Dune::PDELab::Backend::Vector<GFS, DomainField>;
-  using DiscreteGridFunction = Dune::PDELab::DiscreteGridFunctionPiola<GFS, VectorType>;
+  using DiscreteGridFunction = Dune::PDELab::DiscreteGridFunction<GFS, VectorType>;
 };
 
 #endif // DUNE_DARCYFLOW_UTILITY_TRAITS_HH
