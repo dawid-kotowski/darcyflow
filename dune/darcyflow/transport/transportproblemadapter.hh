@@ -6,11 +6,11 @@
 #include <dune/darcyflow/transport/transportproblem.hh>
 
 /**
-   \brief TransportProblemAdapter for exposing darcy velocity from
-          given DiscreteGridFunction
+ \brief TransportProblemAdapter for exposing darcy velocity from
+        given DiscreteGridFunction
 
-   \param transportProblem TransportProblem base containing non-velocity information
-   \param velocityDgf DiscreteGridFunction of the velocity information
+  \param transportProblem TransportProblem base containing non-velocity information
+  \param velocityDgf DiscreteGridFunction of the velocity information
 */
 template<typename DGFType, typename GV, typename RF>
 class TransportProblemAdapter : public TransportProblem<GV, RF>
