@@ -43,7 +43,7 @@ int main(int argc, char** argv)
     // solve darcy velocity
     darcySolver.solve();
     darcySolver.writeVTK(std::string("tmpdarcysolution"));
-    auto velocityDgf = darcySolver.getDiscreteGridFunction();
+    auto velocityDgf = darcySolver.getDiscreteDarcySolution();
 
     // setup transport problem
     using TransportProblemType = TransportProblem<GV, RF>;

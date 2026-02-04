@@ -39,8 +39,11 @@ public:
   auto bctype(const Element& el, const X& x) const
   {
     auto global = el.geometry().global(x);
-    if (global[0] < 1e-10 or global[0] > 1-1e-10)
+    if (((global[0] < tol_) and (global[1] > 1-openingHeight_ - tol_)) or
+        ((global[0] > 1-tol_) and (global[1] < openingHeight_ + tol_)))
+    {
       return Dune::PDELab::ConvectionDiffusionBoundaryConditions::Dirichlet;
+    }
     else
       return Dune::PDELab::ConvectionDiffusionBoundaryConditions::Neumann;
   }

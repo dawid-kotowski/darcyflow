@@ -13,6 +13,82 @@
 #include <dune/darcyflow/darcyvelocity/schurcomplement.hh>
 #include <dune/darcyflow/utility/traits.hh>
 
+
+/**
+ * \brief DarcySolutionContainer explicitly disconnecting both child GFS
+ *        for the sake of GFS integrity.
+ * 
+ * \param gv GridView
+ * \param darcyfem Darcy Velocity Finite Element Method
+ * \param dgfem Discontinous Galerkin Finite Element Method
+ */
+template<typename GV, typename DarcyTraits, typename DGTraits>
+class DarcySolutionContainer
+{
+
+private:
+  using DarcyFEM = DarcyTraits::FEM;
+  using DarcyGFS = DarcyTraits::GFS;
+  using DarcyVector = DarcyTraits::VectorType;
+  using DarcyDGF = DarcyTraits::DiscreteGridFunction;
+
+  using DGFEM = DGTraits::FEM;
+  using DGGFS = DGTraits::GFS;
+  using DGVector = DGTraits::VectorType;
+  using DGDGF = DGTraits::DiscreteGridFunction;
+
+public:
+  DarcySolutionContainer(const GV& gv, const DarcyFEM& darcyfem, const DGFEM& dgfem) 
+    : gv_(gv),
+      darcygfs_(gv_, darcyfem),
+      dggfs_(gv_, dgfem),
+      darcySolution_(darcygfs_, 0.0),
+      dgSolution_(dggfs_, 0.0)
+  {}
+
+  template<typename DarcyVectorBackend>
+  void insertDarcySolution(const DarcyVectorBackend& vec)
+  {
+    using Dune::PDELab::Backend::native;
+    native(darcySolution_) = vec;
+  }
+
+  const DarcyVector& getDarcySolution() const
+  {
+    return darcySolution_;
+  }
+
+  DarcyDGF getDiscreteDarcySolution() const
+  {
+    return DarcyDGF(darcygfs_, darcySolution_);
+  }
+
+  template<typename DGVectorBackend>
+  void insertDGSolution(const DGVectorBackend& vec)
+  {
+    using Dune::PDELab::Backend::native;
+    native(dgSolution_) = vec;
+  }
+
+  const DGVector& getDGSolution() const
+  {
+    return dgSolution_;
+  }
+
+  DGDGF getDiscreteDGSolution() const
+  {
+    return DGDGF(dggfs_, dgSolution_);
+  }
+
+protected:
+  const GV gv_;
+  DarcyGFS darcygfs_;
+  DGGFS dggfs_;
+  DarcyVector darcySolution_;
+  DGVector dgSolution_;
+};
+
+
 /**
  * \brief Darcy Solver using a mixed formulation
  * 
@@ -23,7 +99,7 @@
 template<typename GV, typename Problem,
         typename DarcyTraits = DarcyTraits<GV>,
         typename DGTraits = DGTraits<GV>>
-class DarcySolver
+class DarcySolver : public DarcySolutionContainer<GV, DarcyTraits, DGTraits>
 {
 
 private:
@@ -44,26 +120,26 @@ private:
   using DGDGF = DGTraits::DiscreteGridFunction;
 
   // Tensor spaces
-  using TensorVBE = Dune::PDELab::ISTL::VectorBackend<Dune::PDELab::ISTL::Blocking::bcrs>;
+  using TensorBackend = Dune::PDELab::ISTL::VectorBackend<Dune::PDELab::ISTL::Blocking::bcrs>;
   using TensorGFS = Dune::PDELab::CompositeGridFunctionSpace<
-                    TensorVBE, Dune::PDELab::LexicographicOrderingTag,
+                    TensorBackend, Dune::PDELab::LexicographicOrderingTag,
                     typename DarcyTraits::GFS,DGGFS>;
+
+  // Base class
+  using Base = DarcySolutionContainer<GV, DarcyTraits, DGTraits>;
 
 public:
   DarcySolver(const GV& gv, Problem& problem, Dune::ParameterTree& pTree)
-    : gv_(gv), problem_(problem),
+    : Base(gv, DarcyFEM(gv), DGFEM()),
+      gv_(gv), problem_(problem),
       pTree_(pTree), darcyfem_(gv_), dgfem_(),
-      darcygfs_(gv_, darcyfem_),
-      dggfs_(gv_, dgfem_), darcyCoefficients_(darcygfs_),
-      dgCoefficients_(dggfs_)
+      tmpdarcygfs_(gv_, darcyfem_),
+      tmpdggfs_(gv_, dgfem_), 
+      tensorgfs_(tmpdarcygfs_, tmpdggfs_),
+      solved_(false)
   {
-    darcygfs_.name("RT0");
-    dggfs_.name("DG");
-  }
-
-  DarcyDGF getDiscreteGridFunction() const
-  {
-    return DarcyDGF(darcygfs_, darcyCoefficients_);
+    Base::darcygfs_.name("RT0");
+    Base::dggfs_.name("DG");
   }
 
   void logger(std::string message, Dune::Timer& timer, const int verbose = 0)
@@ -83,11 +159,6 @@ public:
     timer.start();
     logger(std::string("Starting Darcy Problem assembly ..."), timer, processVerb);
 
-    // make tensor gfs (requires tmp, otherwise GFS is changed after init of vectors)
-    DarcyGFS darcygfsTmp(gv_, darcyfem_);
-    DGGFS dggfsTmp(gv_, dgfem_);
-    TensorGFS tensorgfs(darcygfsTmp, dggfsTmp);
-
     // make local operator
     using LocalOperator = Dune::PDELab::DiffusionMixed<Problem>;
     LocalOperator localOperator(problem_);
@@ -98,11 +169,10 @@ public:
     using CC = typename TensorGFS::template ConstraintsContainer<RF>::Type;
     CC cc;
     cc.clear();
-    Dune::PDELab::constraints(bctype, tensorgfs, cc);
+    Dune::PDELab::constraints(bctype, tensorgfs_, cc);
 
     // make grid operator
-    tensorgfs.update();
-    const int upperDofBound = std::pow(2, dim) * tensorgfs.maxLocalSize();
+    const int upperDofBound = std::pow(2, dim) * tensorgfs_.maxLocalSize();
     using MBE = Dune::PDELab::ISTL::BCRSMatrixBackend<>;
     MBE matrix(upperDofBound);
     using GridOperator = Dune::PDELab::GridOperator<TensorGFS,
@@ -110,9 +180,9 @@ public:
                                                     LocalOperator,
                                                     MBE,
                                                     DF, RF, RF, CC, CC>;
-    GridOperator gridOperator(tensorgfs, cc, tensorgfs, cc, localOperator, matrix);
+    GridOperator gridOperator(tensorgfs_, cc, tensorgfs_, cc, localOperator, matrix);
 
-    // Solve matrix-based
+    // solve matrix-based
     using XGFS = typename TensorGFS::template Child<0>::Type;
     using WrappedX = Dune::PDELab::Backend::Vector<XGFS, DF>;
     using X = Dune::PDELab::Backend::Native<WrappedX>;
@@ -123,8 +193,8 @@ public:
     // assemble rhs
     using RhsType = typename GridOperator::Range;
     using LhsType = typename GridOperator::Domain;
-    LhsType zero(tensorgfs, 0.0);
-    RhsType rhs(tensorgfs, 0.0);
+    LhsType zero(tensorgfs_, 0.0);
+    RhsType rhs(tensorgfs_, 0.0);
     gridOperator.residual(zero, rhs);
 
     // assemble full matrix
@@ -142,15 +212,15 @@ public:
     const auto boundaryGridFunction = Dune::PDELab::CompositeGridFunction(darcyDirichlet, dgDirichlet);
 
     // assemble strong constraints
-    RhsType rhsConstraints(tensorgfs, 0.0);
-    Dune::PDELab::interpolate(boundaryGridFunction, tensorgfs, rhsConstraints);
+    RhsType rhsConstraints(tensorgfs_, 0.0);
+    Dune::PDELab::interpolate(boundaryGridFunction, tensorgfs_, rhsConstraints);
     Dune::PDELab::copy_constrained_dofs(cc, rhsConstraints, rhs);
     const auto rhsInit = rhsConstraints;
 
     // correct rhs by strong nonzero dirichlet contributions
     using Dune::PDELab::Backend::native;
     Dune::PDELab::set_nonconstrained_dofs(cc, 0.0, rhsConstraints);
-    RhsType rhsCorrection(tensorgfs, 0.0);
+    RhsType rhsCorrection(tensorgfs_, 0.0);
     native(E).mv(native(rhsConstraints), native(rhsCorrection));
     Dune::PDELab::set_constrained_dofs(cc, 0.0, rhsCorrection);
     rhs -= rhsCorrection;
@@ -193,7 +263,7 @@ public:
 
     // invert the lumped schur matrix for pressure field solution
     // set up AMG as preconditioner
-    using Smoother = Dune::SeqSSOR<LumpedMatrixType, Y, Y>;
+    using Smoother = Dune::SeqSOR<LumpedMatrixType, Y, Y>;
     using AMG = Dune::Amg::AMG<LumpedOperatorType, Y, Smoother>;
     using SmootherArgs = Dune::Amg::SmootherTraits<Smoother>::Arguments;
     SmootherArgs smootherArgs;
@@ -247,7 +317,7 @@ public:
     *dgSolution = 0.0;
     Dune::InverseOperatorResult res;
     dgSolver.apply(*dgSolution, schurrhs, res);
-    dgCoefficients_.attach(dgSolution);
+    this->insertDGSolution(*dgSolution);
     logger(std::string("Finished Inversion."), timer, processVerb);
     //![invert (thus solve) complete pressure problem using schurcomplement]
 
@@ -257,28 +327,30 @@ public:
     ReconstructionType reconstruction(darcyPreciseSolver, dgMatrix, darcyrhs, -1);
     auto reconVector = reconstruction.getReconstructionVector();
     reconstruction.apply(*dgSolution, *reconVector);
+    this->insertDarcySolution(*reconVector);
 
-    typename DarcyTraits::VectorType reconDarcyCoefficients(darcygfs_);
-    reconDarcyCoefficients.attach(reconVector);
-    darcyCoefficients_ = reconDarcyCoefficients;
+    // logger, timer and flags
     logger(std::string("Reconstructed Velocity. Saved Darcyflow."), timer, processVerb);
     double _ = timer.stop();
+    solved_ = true;
   }
 
   void writeVTK(std::string filename = "darcysolution")
   {
+    if (!solved_)
+      DUNE_THROW(Dune::Exception, "Run the solver first!");
     using VTKWriter = Dune::SubsamplingVTKWriter<GV>;
     Dune::RefinementIntervals subsampling(pTree_.template get<double>("visualization.subsamplingVelocity"));
     VTKWriter vtkwriter(gv_, subsampling);
     std::string vtkfile(filename);
 
     // plot velocity
-    DarcyDGF darcydgf(darcygfs_, darcyCoefficients_);
+    DarcyDGF darcydgf = this->getDiscreteDarcySolution();
     using DarcyVTK = Dune::PDELab::VTKGridFunctionAdapter<DarcyDGF>;
     vtkwriter.addCellData(std::make_shared<DarcyVTK>(darcydgf, "Velocity"));
 
     // plot pressure
-    DGDGF dgdgf(dggfs_, dgCoefficients_);
+    DGDGF dgdgf = this->getDiscreteDGSolution();
     using DGVTK = Dune::PDELab::VTKGridFunctionAdapter<DGDGF>;
     vtkwriter.addCellData(std::make_shared<DGVTK>(dgdgf, "Pressure"));
 
@@ -297,10 +369,10 @@ private:
   Dune::ParameterTree& pTree_;
   const DarcyFEM darcyfem_;
   const DGFEM dgfem_;
-  DarcyGFS darcygfs_;
-  DGGFS dggfs_;
-  DarcyVector darcyCoefficients_;
-  DGVector dgCoefficients_;
+  DarcyGFS tmpdarcygfs_;
+  DGGFS tmpdggfs_;
+  TensorGFS tensorgfs_;
+  bool solved_;
 };
 
 
