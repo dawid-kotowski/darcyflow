@@ -115,12 +115,14 @@ public:
     // stationary PDE solver setup
     using PDESolver = Dune::PDELab::StationaryLinearProblemSolver<FullGO, LinearSolver, V>;
     const RF pdeReduction = 1e-10;
-    PDESolver pdesolver(go, ls, pdeReduction);
+    const RF pdeDefect = 1e-99;
+    const int pdeVerbose = 0;
+    PDESolver pdesolver(go, ls, pdeReduction, pdeDefect, pdeVerbose);
 
     // time stepper setup
     Dune::PDELab::ImplicitEulerParameter<RF> method;
     Dune::PDELab::OneStepMethod<RF, FullGO, PDESolver, V, V> osm(method, go, pdesolver);
-    osm.setVerbosityLevel(1);
+    osm.setVerbosityLevel(0);
     logger(std::string("Assembled Problem."), timer, processVerb);
 
     // time stepping

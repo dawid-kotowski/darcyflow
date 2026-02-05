@@ -39,8 +39,10 @@ public:
   auto bctype(const Element& el, const X& x) const
   {
     auto global = el.geometry().global(x);
-    if (global[0] < 1e-10 or global[0] > 1-1e-10)
+    if (((global[0] < tol_) and (global[1] > 1-openingHeight_ - tol_)) or
+        ((global[0] > 1-tol_) and (global[1] < openingHeight_ + tol_))){
       return Dune::PDELab::ConvectionDiffusionBoundaryConditions::Dirichlet;
+    }
     else
       return Dune::PDELab::ConvectionDiffusionBoundaryConditions::Neumann;
   }
@@ -64,7 +66,8 @@ public:
   template<typename Element, typename X>
   auto g (const Element& el, const X& x) const
   {
-    const auto gval = 1.0 - el.geometry().global(x)[0];
+    const auto global = el.geometry().global(x);
+    const auto gval = 1.0 - global[0];
     return -gval;
   }
 
@@ -98,7 +101,7 @@ public:
   }
 
 private:
-  const int tol_ = 1e-10;
+  const double tol_ = 1e-10;
   typename Dune::ParameterTree& pTree_;
   typename Traits::PermTensorType I_;
   const RF minPerm_;
