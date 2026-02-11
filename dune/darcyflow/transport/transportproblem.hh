@@ -25,12 +25,19 @@ public:
   using Base = Dune::PDELab::ConvectionDiffusionModelProblem<GV,RF>;
   using Traits = typename Base::Traits;
 
-  TransportProblem(Dune::ParameterTree pTree) :
+  TransportProblem(Dune::ParameterTree& pTree) :
     Base(), pTree_(pTree),
-    openingHeight_(pTree_.get<RF>("problem.openingHeight")),
-    coatingHeight_(pTree_.get<RF>("problem.coatingHeight")),
+    openingHeight_(pTree_.get<RF>("problem.parametric.openingHeight")),
+    coatingHeight_(pTree_.get<RF>("problem.parametric.coatingHeight")),
     halfReactionBlockHeight_(0.5 - openingHeight_ - coatingHeight_)
   {}
+
+  void update()
+  {
+    openingHeight_ = pTree_.get<RF>("problem.parametric.openingHeight");
+    coatingHeight_ = pTree_.get<RF>("problem.parametric.coatingHeight");
+    halfReactionBlockHeight_ = RF(0.5 - openingHeight_ - coatingHeight_);
+  }
 
   // no diffusion
   template<typename Element, typename X>
@@ -82,6 +89,8 @@ public:
   {
     auto global = el.geometry().global(x);
 
+    // TODO: write this into some more parametric interface
+    
     // Smooth compact bump centered at the top-left corner.
     const RF x0 = 0.0;
     const RF y0 = 1.0;
@@ -100,10 +109,10 @@ public:
 
 private:
   const double tol_ = 1e-10;
-  Dune::ParameterTree pTree_;
-  const RF openingHeight_;
-  const RF coatingHeight_;;
-  const RF halfReactionBlockHeight_;
+  Dune::ParameterTree& pTree_;
+  RF openingHeight_;
+  RF coatingHeight_;;
+  RF halfReactionBlockHeight_;
 };
 
 #endif // DUNE_DARCYFLOW_TRANSPORT_TRANSPORTPROBLEM_HH

@@ -20,7 +20,12 @@ public:
   using Traits = typename Base::Traits;
 
   TransportProblemAdapter(const Base& transportProblem, const DGFType& velocityDgf)
-    : Base(transportProblem), transportProblem_(transportProblem), velocityDgf_(velocityDgf) {}
+    : Base(transportProblem), transportProblem_(transportProblem), velocityDgf_(&velocityDgf) {}
+
+  void updateDgf(const DGFType& dgf)
+  {
+    velocityDgf_ = &dgf;
+  }
 
   template<typename Element, typename X>
   auto bctype(const Element& el, const X& x) const
@@ -43,13 +48,13 @@ public:
   {
     // warning: refined grids are not implemented!
     typename Traits::RangeType ret(0.0);
-    velocityDgf_.evaluate(el, x, ret);
+    velocityDgf_->evaluate(el, x, ret);
     return ret;
   }
 
 private:
   const Base& transportProblem_;
-  const DGFType& velocityDgf_;
+  const DGFType* velocityDgf_;
 };
 
 #endif  // DUNE_ULTRAWEAK_DARCY_VELOCITY_DARCY_VELOCITY_ADAPTER_HH

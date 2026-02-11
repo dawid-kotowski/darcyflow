@@ -9,6 +9,7 @@
 #include <dune/darcyflow/transport/transportsolver.hh>
 
 #include <dune/darcyflow/utility/parameters.hh>
+#include <dune/darcyflow/utility/parametersolver.hh>
 
 
 #endif // DUNE_DARCYFLOW_HH

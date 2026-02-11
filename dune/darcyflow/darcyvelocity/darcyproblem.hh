@@ -23,15 +23,24 @@ public:
 
   DarcyProblem(Dune::ParameterTree& pTree) : Base(),
     pTree_(pTree), I_(0.0),
-    minPerm_(pTree_.get<RF>("darcy.minPermeability")),
-    coatingPerm_(pTree_.get<RF>("darcy.coatingPermeability")),
-    openingHeight_(pTree_.get<RF>("problem.openingHeight")),
-    coatingHeight_(pTree_.get<RF>("problem.coatingHeight")),
+    minPerm_(pTree_.get<RF>("problem.parametric.minPermeability")),
+    coatingPerm_(pTree_.get<RF>("problem.parametric.coatingPermeability")),
+    openingHeight_(pTree_.get<RF>("problem.parametric.openingHeight")),
+    coatingHeight_(pTree_.get<RF>("problem.parametric.coatingHeight")),
     halfReactionBlockHeight_(0.5 - openingHeight_ - coatingHeight_)
   {
     // precompute unity tensor
     for (std::size_t i=0; i<Traits::dimDomain; i++)
       I_[i][i] = 1.0;
+  }
+
+  void update()
+  {
+    minPerm_ = pTree_.get<RF>("problem.parametric.minPermeability");
+    coatingPerm_ = pTree_.get<RF>("problem.parametric.coatingPermeability");
+    openingHeight_ = pTree_.get<RF>("problem.parametric.openingHeight");
+    coatingHeight_ = pTree_.get<RF>("problem.parametric.coatingHeight");
+    halfReactionBlockHeight_ = RF(0.5 - openingHeight_ - coatingHeight_);
   }
 
   // Boundary condition type
@@ -104,11 +113,11 @@ private:
   const double tol_ = 1e-10;
   typename Dune::ParameterTree& pTree_;
   typename Traits::PermTensorType I_;
-  const RF minPerm_;
-  const RF coatingPerm_;
-  const RF openingHeight_;
-  const RF coatingHeight_;;
-  const RF halfReactionBlockHeight_;
+  RF minPerm_;
+  RF coatingPerm_;
+  RF openingHeight_;
+  RF coatingHeight_;;
+  RF halfReactionBlockHeight_;
 };
 
 #endif // DUNE_DARCYFLOW_DARCYVELOCITY_DARCYPROBLEM_HH

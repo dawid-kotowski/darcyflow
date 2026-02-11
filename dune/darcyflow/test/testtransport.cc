@@ -57,8 +57,9 @@ int main(int argc, char** argv)
     TransportSolverType transportSolver(grid->leafGridView(), transportProblem, pTree);
 
     // solve transport problem with darcy velocity
-    transportSolver.solve();
-    transportSolver.writeVTK();
+    using SolutionType = TransportSolverType::SolutionType;
+    SolutionType solutionTrajectory = transportSolver.solve();
+    transportSolver.writeVTK(solutionTrajectory);
   }
   catch (Dune::Exception& e)
   {

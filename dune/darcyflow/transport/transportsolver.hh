@@ -1,8 +1,8 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
 
-#ifndef DUNE_DARCYFLOW_TRANSPORTSOLVER_HH
-#define DUNE_DARCYFLOW_TRANSPORTSOLVER_HH
+#ifndef DUNE_DARCYFLOW_TRANSPORT_TRANSPORTSOLVER_HH
+#define DUNE_DARCYFLOW_TRANSPORT_TRANSPORTSOLVER_HH
 
 #include <dune/pdelab.hh>
 
@@ -34,6 +34,9 @@ private:
   using MBE = Dune::PDELab::ISTL::BCRSMatrixBackend<>;
 
 public:
+  using SolutionType = std::vector<DGVector>;
+
+public:
   TransportSolver(const GV& gv, Problem& problem, Dune::ParameterTree& pTree)
     : gv_(gv), problem_(problem), pTree_(pTree),
       dgfem_(), dggfs_(gv_, dgfem_)
@@ -51,7 +54,10 @@ public:
     }
   }
 
-  void solve()
+  /**
+   * \brief Generic in-place Solver for current state of pTree
+   */
+  SolutionType solve()
   {
     // logger setup
     const int processVerb = 1;
@@ -120,7 +126,7 @@ public:
     PDESolver pdesolver(go, ls, pdeReduction, pdeDefect, pdeVerbose);
 
     // time stepper setup
-    Dune::PDELab::ImplicitEulerParameter<RF> method;
+    Dune::PDELab::ExplicitEulerParameter<RF> method;
     Dune::PDELab::OneStepMethod<RF, FullGO, PDESolver, V, V> osm(method, go, pdesolver);
     osm.setVerbosityLevel(0);
     logger(std::string("Assembled Problem."), timer, processVerb);
@@ -130,6 +136,7 @@ public:
     double time = pTree_.get<double>("time.time");
     double dt = pTree_.get<double>("time.dt");
     double T = pTree_.get<double>("time.T");
+    SolutionType solutionTrajectory;
     while (time < T - 1e-10)
     {
       // time step
@@ -137,7 +144,7 @@ public:
       osm.apply(time, dt, vOld, vNew);
 
       // increment
-      solutionTrajectory_.push_back(vNew);
+      solutionTrajectory.push_back(vNew);
       vOld = vNew;
       time += dt;
 
@@ -147,13 +154,18 @@ public:
     }
     logger(std::string("Computed Time Trajectory. Saved Solution."), timer, processVerb);
     double _ = timer.stop();
+
+    return solutionTrajectory;
   }
 
-  void writeVTK(std::string filename = "transportdgsolution")
+  /**
+   * \brief writer method given a trajectory of type std::vector<DGCoefficientType>
+   */
+  void writeVTK(const SolutionType& solutionTrajectory,
+                std::string filename = "transportsolution")
   {
     // assertion for solver
-    // warning: the time scaling should NEVER be subject to change in the pTree during compute
-    if (solutionTrajectory_.empty())
+    if (solutionTrajectory.empty())
         DUNE_THROW(Dune::Exception, "Run the solver first!");
 
     // vtk setup
@@ -172,9 +184,9 @@ public:
     double time = pTree_.get<double>("time.time");
     double dt = pTree_.get<double>("time.dt");
     double T = pTree_.get<double>("time.T");
-    for (std::size_t timeStep = 0 ; timeStep < solutionTrajectory_.size() ; ++timeStep )
+    for (std::size_t timeStep = 0 ; timeStep < solutionTrajectory.size() ; ++timeStep )
     {
-      solutionCoefficients = solutionTrajectory_[timeStep];
+      solutionCoefficients = solutionTrajectory[timeStep];
       vtkwriter.write(time, Dune::VTK::appendedraw);
       time += dt;
     }
@@ -187,7 +199,6 @@ private:
   typename Dune::ParameterTree& pTree_;
   DGFEM dgfem_;
   DGGFS dggfs_;
-  std::vector<DGVector> solutionTrajectory_;
 };
 
-#endif // DUNE_DARCYFLOW_TRANSPORTSOLVER_HH
+#endif // DUNE_DARCYFLOW_TRANSPORT_TRANSPORTSOLVER_HH

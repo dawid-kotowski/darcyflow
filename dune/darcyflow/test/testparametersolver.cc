@@ -9,46 +9,55 @@
 
 #include <dune/darcyflow.hh>
 
+
 int main(int argc, char** argv)
 {
   try
   {
     Dune::MPIHelper::instance(argc, argv);
 
-    static const int dim = 2;
+    const int dim = 2;
     using RF = double;
 
-    // setup default parameters
-    typename Dune::ParameterTree pTree;
-    typename Dune::ParameterTreeParser pTreeParser;
+    // setup parameters
+    Dune::ParameterTree pTree;
+    Dune::ParameterTreeParser pTreeParser;
     pTreeParser.readINITree("parameter.ini", pTree);
     pTreeParser.readOptions(argc, argv, pTree);
 
     // setup grid
-    using Grid = typename Dune::YaspGrid<dim>;
+    using Grid = Dune::YaspGrid<dim>;
     Dune::FieldVector<RF, dim> domain(1.0);
     std::array<int, dim> domainDims;
     domainDims[0] = pTree.get<int>("grid.yasp_x");
     domainDims[1] = pTree.get<int>("grid.yasp_y");
     auto grid = std::make_shared<Grid>(domain, domainDims);
-    
-    // setup darcy solver
     using GV = Grid::LeafGridView;
-    using DarcyProblemType = DarcyProblem<GV, RF>;
-    DarcyProblemType darcyProblem(pTree);
-    using DarcySolver = DarcySolver<GV, DarcyProblemType>;
-    DarcySolver darcySolver(grid->leafGridView(), darcyProblem, pTree);
-    darcySolver.solve();
-    darcySolver.writeVTK();
+    GV gv = grid->leafGridView();
+
+    // setup solver
+    using ParameterSolverType = ParameterSolver<GV>;
+    ParameterSolverType parameterSolver(gv, pTree);
+
+    // setup some parameters
+    std::array<double, 4> parameter;
+    parameter[0] = 0.25;
+    parameter[1] = 0.125;
+    parameter[2] = 0.2;
+    parameter[3] = 0.05;
+    
+    // solve for that choice of parameters
+    auto solution = parameterSolver.solve(parameter);
+    parameterSolver.visualize(solution);
   }
-  catch (Dune::Exception &e)
+  catch (Dune::Exception& e)
   {
     std::cerr << "Dune reported error: " << e << std::endl;
-        return 1;
+    return 1;
   }
   catch (...)
   {
     std::cerr << "Unknown exception thrown!" << std::endl;
-        return 1;
+    return 1;
   }
 }
