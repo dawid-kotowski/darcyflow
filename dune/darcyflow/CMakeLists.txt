@@ -1,4 +1,5 @@
 add_subdirectory(darcyvelocity)
+add_subdirectory(pybind11)
 add_subdirectory(test)
 add_subdirectory(transport)
 add_subdirectory(utility)

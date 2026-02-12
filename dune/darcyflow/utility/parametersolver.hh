@@ -29,6 +29,7 @@ private:
   using TransportProblemAdapterType = TransportProblemAdapter<DarcyDGF, GV, RF>;
   using TransportSolverType = TransportSolver<GV, TransportProblemAdapterType>;
 
+public:
   using SolutionType = typename TransportSolverType::SolutionType;
 
 public:
@@ -42,6 +43,11 @@ public:
       adaptedTransportProblem_(transportProblem_, darcyDgf_),
       transportSolver_(gv_, adaptedTransportProblem_, pTree_)
   {}
+
+  const auto& getGfs()
+  {
+    return transportSolver_.getGfs();
+  }
 
   template<typename Param>
   SolutionType solve(const Param& parameters)

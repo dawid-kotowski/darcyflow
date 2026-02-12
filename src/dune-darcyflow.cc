@@ -4,27 +4,18 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-#include <iostream>
-#include <dune/common/parallel/mpihelper.hh> // An initializer of MPI
-#include <dune/common/exceptions.hh> // We use exceptions
 
-int main(int argc, char** argv)
+#include <dune/python/pybind11/pybind11.h>
+#include <dune/python/pybind11/stl.h>
+#include <dune/python/pybind11/numpy.h>
+
+#include <dune/darcyflow/pybind11/bindings.hh>
+
+namespace py = pybind11;
+
+PYBIND11_MODULE(ipydarcyflow, m)
 {
-  try{
-    // Maybe initialize MPI
-    Dune::MPIHelper& helper = Dune::MPIHelper::instance(argc, argv);
-    std::cout << "Hello World! This is dune-darcyflow." << std::endl;
-    if(Dune::MPIHelper::isFake)
-      std::cout<< "This is a sequential program." << std::endl;
-    else
-      std::cout<<"I am rank "<<helper.rank()<<" of "<<helper.size()
-        <<" processes!"<<std::endl;
-    return 0;
-  }
-  catch (Dune::Exception &e){
-    std::cerr << "Dune reported error: " << e << std::endl;
-  }
-  catch (...){
-    std::cerr << "Unknown exception thrown!" << std::endl;
-  }
+  m.doc() = "pybin11 dune-darcyflow plugin";
+
+  registerSolverIntoModule(m);
 }

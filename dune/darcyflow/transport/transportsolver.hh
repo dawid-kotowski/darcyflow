@@ -44,6 +44,11 @@ public:
     dggfs_.name("DGTransport");
   }
 
+  const DGGFS& getGfs() const
+  {
+    return dggfs_;
+  }
+
   void logger(std::string message, Dune::Timer& timer, const int verbose = 0)
   {
     double time = timer.elapsed();

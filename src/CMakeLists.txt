@@ -1,11 +1,8 @@
-# create custom target
-add_executable(dune-darcyflow dune-darcyflow.cc)
+# Add the Python Module to the library
+add_library(ipydarcyflow SHARED dune-darcyflow.cc)
 
-# link target against found dune libraries (e.g. dune-common)
-target_link_dune_default_libraries(dune-darcyflow)
+# Link into Python Lib
+target_link_libraries(ipydarcyflow ${PYTHON_LIBRARIES})
 
-# set include directories for the target
-dune_default_include_directories(dune-darcyflow PRIVATE)
-
-# link target against other dune registered packages (e.g. TBB, METIS, etc.)
-dune_target_enable_all_packages(dune-darcyflow)
+# idk why this is (removes prefix?)
+set_target_properties(ipydarcyflow PROPERTIES PREFIX "")
