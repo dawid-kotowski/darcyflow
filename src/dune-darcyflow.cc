@@ -15,7 +15,7 @@ namespace py = pybind11;
 
 PYBIND11_MODULE(ipydarcyflow, m)
 {
-  m.doc() = "pybin11 dune-darcyflow plugin";
+  m.doc() = "pybind11 dune-darcyflow plugin";
 
   registerSolverIntoModule(m);
 }
