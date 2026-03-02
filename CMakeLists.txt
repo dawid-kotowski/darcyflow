@@ -18,13 +18,24 @@ include(DuneMacros)
 # start a dune project with information from dune.module
 dune_project()
 
+# create library target and export it as Dune::ISTL
+dune_add_library(dunedarcyflow INTERFACE
+  EXPORT_NAME DarcyFlow
+  LINK_LIBRARIES Dune::DarcyFlow)
+
+# set include directories to target
+dune_default_include_directories(dunedarcyflow INTERFACE)
+
 dune_enable_all_packages()
 
 add_subdirectory(src)
-add_subdirectory(python)
 add_subdirectory(dune)
 add_subdirectory(doc)
 add_subdirectory(cmake/modules)
+
+if(DUNE_ENABLE_PYTHONBINDINGS)
+  add_subdirectory(python)
+endif()
 
 # finalize the dune project, e.g. generating config.h etc.
 finalize_dune_project(GENERATE_CONFIG_H_CMAKE)
