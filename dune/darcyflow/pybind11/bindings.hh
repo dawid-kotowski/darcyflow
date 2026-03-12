@@ -4,6 +4,12 @@
 #ifndef DUNE_DARCYFLOW_PYBIND11_BINDINGS_HH
 #define DUNE_DARCYFLOW_PYBIND11_BINDINGS_HH
 
+#include <array>
+#include <map>
+#include <memory>
+#include <sstream>
+#include <string>
+
 #include <dune/darcyflow.hh>
 
 namespace py = pybind11;
@@ -61,7 +67,7 @@ namespace Dune
           } else {
             try {
               map[key] = toString(item.second);
-            } catch (Dune::Exception& ex) {
+            } catch (Dune::Exception&) {
               // ignore the entry. will be triggered for numpy arrays, which we do not want to be
               // converted to string
             }
@@ -125,25 +131,49 @@ namespace Dune
         
         using Solver = ParameterSolver<GV>;
         using SolutionType = typename Solver::SolutionType;
+        using WrappedVectorType = typename SolutionType::value_type;
+        using NativeVectorType = Dune::PDELab::Backend::Native<WrappedVectorType>;
+        using PythonSolutionType = std::vector<NativeVectorType>;
         
         using ParameterType = std::array<RF, ParameterParser::parameterSize>;
+        
+      private:
+        using MatrixBackendType = Dune::PDELab::ISTL::BCRSMatrixBackend<>;
+        using L2Type = Dune::PDELab::L2;
+        using L2GridOperator = Dune::PDELab::GridOperator<
+          typename DGTraits<GV>::GFS, typename DGTraits<GV>::GFS,
+          L2Type, MatrixBackendType, RF, RF, RF,
+          typename DGTraits<GV>::ConstraintsType, typename DGTraits<GV>::ConstraintsType>;
+        using L2MatrixType = Dune::PDELab::Backend::Native<typename L2GridOperator::Jacobian>;
 
       public:
         FullSolver(py::dict config)
           : pTree_(toParameterTree(config))
         {
           // grid setup
-          Dune::FieldVector<double, dim> domain({1.0, 1.0});
-          std::array<int, dim> domainDims = {
-            domainDims[0] = pTree_.get<int>("grid.yasp_x"),
-            domainDims[1] = pTree_.get<int>("grid.yasp_y")
-          };
+          Dune::FieldVector<double, dim> domain(1.0);
+          std::array<int, dim> domainDims;
+          domainDims[0] = pTree_.get<int>("grid.yasp_x");
+          domainDims[1] = pTree_.get<int>("grid.yasp_y");
 
           grid_ = std::make_unique<Grid>(domain, domainDims);
-          const auto gv = grid_->leafGridView();
+          gv_ = std::make_unique<GV>(grid_->leafGridView());
 
           // set up solver
-          solver_ = std::make_unique<Solver>(gv, pTree_);
+          solver_ = std::make_unique<Solver>(*gv_, pTree_);
+
+          // assemble L2-product on the test space
+          using GFSDomain = typename L2GridOperator::Domain;
+          GFSDomain zero(solver_->getGfs(), 0.0);
+          MatrixBackendType mbe(1<<(dim+1));
+          L2Type mass;
+          auto l2massgo = std::make_shared<L2GridOperator>(
+            solver_->getGfs(), solver_->getConstraints(), 
+            solver_->getGfs(), solver_->getConstraints(),
+            mass, mbe);
+          typename L2GridOperator::Jacobian l2mat(*l2massgo, 0.0);
+          l2massgo->jacobian(zero, l2mat);
+          gramMatrix_ = Dune::PDELab::Backend::native(l2mat);
 
           // set public members
           dimSource = solver_->getGfs().globalSize();
@@ -152,21 +182,41 @@ namespace Dune
 
         FullSolver(FullSolver&& other) = delete;
 
-        SolutionType solve(const ParameterType& mu)
+        PythonSolutionType solve(const ParameterType& mu)
         {
-          return solver_->template solve<ParameterType>(mu);
+          SolutionType solution = solver_->template solve<ParameterType>(mu);
+          PythonSolutionType nativeSolution;
+          nativeSolution.reserve(solution.size());
+          for (auto& state : solution)
+            nativeSolution.push_back(Dune::PDELab::Backend::native(state));
+          return nativeSolution;
         }
 
-        void visualize(const SolutionType& solution,
+        const L2MatrixType& getL2MassMatrix() const
+        {
+          return gramMatrix_;
+        }
+
+        void visualize(const PythonSolutionType& solution,
           const std::string filename="solution")
         {
-          solver_->visualize(solution, filename);
+          SolutionType wrappedSolution;
+          wrappedSolution.reserve(solution.size());
+          for (const auto& state : solution)
+          {
+            WrappedVectorType wrappedState(solver_->getGfs());
+            Dune::PDELab::Backend::native(wrappedState) = state;
+            wrappedSolution.push_back(std::move(wrappedState));
+          }
+          solver_->visualize(wrappedSolution, filename);
         }
 
       protected:
         Dune::ParameterTree pTree_;
-        std::unique_ptr<Solver> solver_;
         std::unique_ptr<Grid> grid_;
+        std::unique_ptr<GV> gv_;
+        std::unique_ptr<Solver> solver_;
+        L2MatrixType gramMatrix_;
 
       public:
         std::size_t dimSource;
@@ -195,6 +245,8 @@ void registerSolverIntoModule(py::module m)
   cls.def("visualize", &T::visualize, "write graphic into vtk",
     py::arg("solution"),
     py::arg("filename") = "solution");
+  cls.def("getL2MassMatrix", &T::getL2MassMatrix,
+    py::return_value_policy::reference_internal);
 }
 
 #endif  // DUNE_DARCYFLOW_PYBIND11_BINDINGS_HH

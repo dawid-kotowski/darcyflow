@@ -42,11 +42,18 @@ public:
       dgfem_(), dggfs_(gv_, dgfem_)
   {
     dggfs_.name("DGTransport");
+    dggfs_.update();
+    constraints_.clear();
   }
 
   const DGGFS& getGfs() const
   {
     return dggfs_;
+  }
+
+  const DGConstraints& getConstraints() const
+  {
+    return constraints_;
   }
 
   void logger(std::string message, Dune::Timer& timer, const int verbose = 0)
@@ -204,6 +211,7 @@ private:
   typename Dune::ParameterTree& pTree_;
   DGFEM dgfem_;
   DGGFS dggfs_;
+  DGConstraints constraints_;
 };
 
 #endif // DUNE_DARCYFLOW_TRANSPORT_TRANSPORTSOLVER_HH

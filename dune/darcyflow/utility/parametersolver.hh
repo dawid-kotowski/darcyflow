@@ -44,9 +44,14 @@ public:
       transportSolver_(gv_, adaptedTransportProblem_, pTree_)
   {}
 
-  const auto& getGfs()
+  const auto& getGfs() const
   {
     return transportSolver_.getGfs();
+  }
+
+  const auto& getConstraints() const
+  {
+    return transportSolver_.getConstraints();
   }
 
   template<typename Param>
