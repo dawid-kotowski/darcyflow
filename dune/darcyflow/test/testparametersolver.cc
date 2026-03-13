@@ -40,11 +40,12 @@ int main(int argc, char** argv)
     ParameterSolverType parameterSolver(gv, pTree);
 
     // setup some parameters
-    std::array<double, 4> parameter;
+    std::array<double, 5> parameter;
     parameter[0] = 0.25;
     parameter[1] = 0.125;
     parameter[2] = 0.2;
     parameter[3] = 0.05;
+    parameter[4] = 1.4;
     
     // solve for that choice of parameters
     auto solution = parameterSolver.solve(parameter);

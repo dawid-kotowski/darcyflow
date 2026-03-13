@@ -130,10 +130,11 @@ class DuneDarcyFlowModel(Model):
                 float(config.get("problem.parametric.coatingHeight", 0.0)),
                 float(config.get("problem.parametric.minPermeability", 0.0)),
                 float(config.get("problem.parametric.coatingPermeability", 0.0)),
+                float(config.get("problem.parametric.inflowAngle", 0.0)),
             ],
             dtype=np.float64,
         )
-        self.parameter_indices = parameter_indices or {"mu": (0,), "nu": (2,)}
+        self.parameter_indices = parameter_indices or {"mu": (0, 1, 4), "nu": (2, 3)}
         super().__init__(products=products, error_estimator=error_estimator, name=name)
         self.parameters_own = Parameters({k: len(v) for k, v in self.parameter_indices.items()})
 

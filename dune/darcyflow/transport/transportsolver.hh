@@ -66,6 +66,17 @@ public:
     }
   }
 
+  void enforceInflow(DGVector& solution, const DGVector& inflowValues, const DGVector& inflowMask) const
+  {
+    using Dune::PDELab::Backend::native;
+    auto& nativeSolution = native(solution);
+    const auto& nativeInflowValues = native(inflowValues);
+    const auto& nativeInflowMask = native(inflowMask);
+    for (std::size_t i = 0; i < nativeSolution.N(); ++i)
+      if (nativeInflowMask[i] > 0.5)
+        nativeSolution[i] = nativeInflowValues[i];
+  }
+
   /**
    * \brief Generic in-place Solver for current state of pTree
    */
@@ -122,7 +133,18 @@ public:
     // employ dirichlet conditions
     using BCExtender = Dune::PDELab::ConvectionDiffusionDirichletExtensionAdapter<Problem>;
     BCExtender g(gv_, problem_);
-    Dune::PDELab::interpolate(g, dggfs_, vOld);
+    DGVector inflowValues(dggfs_);
+    inflowValues = 0.0;
+    Dune::PDELab::interpolate(g, dggfs_, inflowValues);
+    const auto inflowIndicator = Dune::PDELab::makeGridFunctionFromCallable(gv_,
+      [this](const auto& el, const auto& x)
+      {
+        return problem_.isInflowElement(el) ? RF(1.0) : RF(0.0);
+      });
+    DGVector inflowMask(dggfs_);
+    inflowMask = 0.0;
+    Dune::PDELab::interpolate(inflowIndicator, dggfs_, inflowMask);
+    enforceInflow(vOld, inflowValues, inflowMask);
 
     // stationary linear solver setup
     const int lsMaxIterations = 10000;
@@ -138,7 +160,7 @@ public:
     PDESolver pdesolver(go, ls, pdeReduction, pdeDefect, pdeVerbose);
 
     // time stepper setup
-    Dune::PDELab::ExplicitEulerParameter<RF> method;
+    Dune::PDELab::Alexander2Parameter<RF> method;
     Dune::PDELab::OneStepMethod<RF, FullGO, PDESolver, V, V> osm(method, go, pdesolver);
     osm.setVerbosityLevel(0);
     logger(std::string("Assembled Problem."), timer, processVerb);
@@ -154,6 +176,7 @@ public:
       // time step
       V vNew(dggfs_, 0.0);
       osm.apply(time, dt, vOld, vNew);
+      enforceInflow(vNew, inflowValues, inflowMask);
 
       // increment
       solutionTrajectory.push_back(vNew);

@@ -10,7 +10,7 @@ class ParameterParser
 {
 
 public:
-  static const int parameterSize = 4;
+  static const int parameterSize = 5;
 
 public:
   ParameterParser(Dune::ParameterTree& pTree)
@@ -24,6 +24,7 @@ public:
     pTree_["problem.parametric.coatingHeight"] = std::to_string(mu[1]);
     pTree_["problem.parametric.minPermeability"] = std::to_string(mu[2]);
     pTree_["problem.parametric.coatingPermeability"] = std::to_string(mu[3]);
+    pTree_["problem.parametric.inflowAngle"] = std::to_string(mu[4]);
   }
 
   Dune::ParameterTree getParameterTree() const

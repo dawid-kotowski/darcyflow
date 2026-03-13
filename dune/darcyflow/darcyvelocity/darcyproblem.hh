@@ -27,6 +27,8 @@ public:
     coatingPerm_(pTree_.get<RF>("problem.parametric.coatingPermeability")),
     openingHeight_(pTree_.get<RF>("problem.parametric.openingHeight")),
     coatingHeight_(pTree_.get<RF>("problem.parametric.coatingHeight")),
+    inflowAngle_(pTree_.get<RF>("problem.parametric.inflowAngle")),
+    inflowVelocity_(pTree_.template get<RF>("problem.inflowVelocity", 1.0)),
     halfReactionBlockHeight_(0.5 - openingHeight_ - coatingHeight_)
   {
     // precompute unity tensor
@@ -40,6 +42,8 @@ public:
     coatingPerm_ = pTree_.get<RF>("problem.parametric.coatingPermeability");
     openingHeight_ = pTree_.get<RF>("problem.parametric.openingHeight");
     coatingHeight_ = pTree_.get<RF>("problem.parametric.coatingHeight");
+    inflowAngle_ = pTree_.get<RF>("problem.parametric.inflowAngle");
+    inflowVelocity_ = pTree_.template get<RF>("problem.inflowVelocity", 1.0);
     halfReactionBlockHeight_ = RF(0.5 - openingHeight_ - coatingHeight_);
   }
 
@@ -88,11 +92,14 @@ public:
 
     using Vec = Dune::FieldVector<double,2>;
     const double eta = pTree_.template get<double>("problem.eta");
+    using std::cos;
+    using std::sin;
+    const Vec direction({cos(inflowAngle_), sin(inflowAngle_)});
 
     // Poiseuille profile
-    auto profile = [eta, this](const auto& r){
+    auto profile = [eta, this, direction](const auto& r){
       using std::pow;
-      return Vec({(pow(0.5*openingHeight_,2) - pow(r,2)) / (4*eta), 0.0});
+      return direction * (inflowVelocity_ * (pow(0.5*openingHeight_,2) - pow(r,2)) / (4*eta));
     };
 
     using std::abs;
@@ -117,6 +124,8 @@ private:
   RF coatingPerm_;
   RF openingHeight_;
   RF coatingHeight_;;
+  RF inflowAngle_;
+  RF inflowVelocity_;
   RF halfReactionBlockHeight_;
 };
 

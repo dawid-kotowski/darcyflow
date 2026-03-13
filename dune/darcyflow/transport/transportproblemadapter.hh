@@ -34,16 +34,7 @@ public:
   auto bctype(const Element& el, const X& x) const
   {
     const auto& insidePos = el.geometryInInside().global(x);
-
-    const auto& vel = b(el.inside(), insidePos);
-    const auto val = vel.dot(el.unitOuterNormal(x));
-    const double tol = 1e-10;
-    if (val > tol)
-      return Dune::PDELab::ConvectionDiffusionBoundaryConditions::Outflow;
-    else if (val < -tol)
-      return Dune::PDELab::ConvectionDiffusionBoundaryConditions::Dirichlet;
-    else
-      return Dune::PDELab::ConvectionDiffusionBoundaryConditions::None;
+    return transportProblem_.bctype(el.inside(), insidePos);
   }
 
   template<typename Element, typename X>
