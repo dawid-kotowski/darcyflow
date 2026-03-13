@@ -78,7 +78,7 @@ public:
 
   void solve()
   {
-    const int processVerb = 1;
+    const int processVerb = 0;
     Dune::Timer timer;
     timer.start();
     logger(std::string("Starting Darcy Problem assembly ..."), timer, processVerb);

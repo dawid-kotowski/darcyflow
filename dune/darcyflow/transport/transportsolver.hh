@@ -83,7 +83,7 @@ public:
   SolutionType solve()
   {
     // logger setup
-    const int processVerb = 1;
+    const int processVerb = 0;
     Dune::Timer timer;
     timer.start();
 
@@ -168,20 +168,26 @@ public:
     // time stepping
     logger(std::string("Starting Time Solver Loop ..."), timer, processVerb);
     double time = pTree_.get<double>("time.time");
+    double solverSteps = pTree_.get<double>("time.solverSteps");
     double dt = pTree_.get<double>("time.dt");
     double T = pTree_.get<double>("time.T");
+    double nextSaveTime = time + dt;
     SolutionType solutionTrajectory;
     while (time < T - 1e-10)
     {
       // time step
       V vNew(dggfs_, 0.0);
-      osm.apply(time, dt, vOld, vNew);
+      osm.apply(time, solverSteps, vOld, vNew);
       enforceInflow(vNew, inflowValues, inflowMask);
 
       // increment
-      solutionTrajectory.push_back(vNew);
+      time += solverSteps;
+      if (time + 1e-12 >= nextSaveTime)
+      {
+        solutionTrajectory.push_back(vNew);
+        nextSaveTime += dt;
+      }
       vOld = vNew;
-      time += dt;
 
       // assemble constraints for new time step
       problem_.setTime(time);
@@ -216,7 +222,7 @@ public:
     vtkwriter.addVertexData(std::make_shared<VTKGridAdapter>(solution, "uh"));
 
     // time stepping
-    double time = pTree_.get<double>("time.time");
+    double time = pTree_.get<double>("time.time") + pTree_.get<double>("time.dt");
     double dt = pTree_.get<double>("time.dt");
     double T = pTree_.get<double>("time.T");
     for (std::size_t timeStep = 0 ; timeStep < solutionTrajectory.size() ; ++timeStep )
