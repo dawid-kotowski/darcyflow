@@ -171,7 +171,7 @@ public:
     double solverSteps = pTree_.get<double>("time.solverSteps");
     double dt = pTree_.get<double>("time.dt");
     double T = pTree_.get<double>("time.T");
-    double nextSaveTime = time + dt;
+    double nextSaveTime = time;
     SolutionType solutionTrajectory;
     while (time < T - 1e-10)
     {
@@ -222,7 +222,7 @@ public:
     vtkwriter.addVertexData(std::make_shared<VTKGridAdapter>(solution, "uh"));
 
     // time stepping
-    double time = pTree_.get<double>("time.time") + pTree_.get<double>("time.dt");
+    double time = pTree_.get<double>("time.time");
     double dt = pTree_.get<double>("time.dt");
     double T = pTree_.get<double>("time.T");
     for (std::size_t timeStep = 0 ; timeStep < solutionTrajectory.size() ; ++timeStep )

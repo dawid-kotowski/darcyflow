@@ -25,7 +25,7 @@ public:
     pTree_(pTree), I_(0.0),
     minPerm_(pTree_.get<RF>("problem.parametric.minPermeability")),
     coatingPerm_(pTree_.get<RF>("problem.parametric.coatingPermeability")),
-    openingHeight_(pTree_.get<RF>("problem.parametric.openingHeight")),
+    openingHeight_(pTree_.get<RF>("problem.non-parametric.openingHeight")),
     coatingHeight_(pTree_.get<RF>("problem.parametric.coatingHeight")),
     inflowAngle_(pTree_.get<RF>("problem.parametric.inflowAngle")),
     inflowVelocity_(pTree_.template get<RF>("problem.inflowVelocity", 1.0)),
@@ -40,10 +40,8 @@ public:
   {
     minPerm_ = pTree_.get<RF>("problem.parametric.minPermeability");
     coatingPerm_ = pTree_.get<RF>("problem.parametric.coatingPermeability");
-    openingHeight_ = pTree_.get<RF>("problem.parametric.openingHeight");
     coatingHeight_ = pTree_.get<RF>("problem.parametric.coatingHeight");
     inflowAngle_ = pTree_.get<RF>("problem.parametric.inflowAngle");
-    inflowVelocity_ = pTree_.template get<RF>("problem.inflowVelocity", 1.0);
     halfReactionBlockHeight_ = RF(0.5 - openingHeight_ - coatingHeight_);
   }
 

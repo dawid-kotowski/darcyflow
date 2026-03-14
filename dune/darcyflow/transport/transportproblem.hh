@@ -27,14 +27,13 @@ public:
 
   TransportProblem(Dune::ParameterTree& pTree) :
     Base(), pTree_(pTree),
-    openingHeight_(pTree_.get<RF>("problem.parametric.openingHeight")),
+    openingHeight_(pTree_.get<RF>("problem.non-parametric.openingHeight")),
     coatingHeight_(pTree_.get<RF>("problem.parametric.coatingHeight")),
     halfReactionBlockHeight_(0.5 - openingHeight_ - coatingHeight_)
   {}
 
   void update()
   {
-    openingHeight_ = pTree_.get<RF>("problem.parametric.openingHeight");
     coatingHeight_ = pTree_.get<RF>("problem.parametric.coatingHeight");
     halfReactionBlockHeight_ = RF(0.5 - openingHeight_ - coatingHeight_);
   }
