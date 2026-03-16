@@ -133,10 +133,10 @@ public:
     gridOperator.jacobian(zero, E);
 
     // build dirichlet containers
-    const auto flowFunction = [this](const auto& is, const auto& x) { 
-      return problem_.j(is, x); 
+    const auto flowFunction = [this](const auto& is, const auto& x) {
+      return problem_.j(is, x);
     };
-    const auto neutralFunction = [](const auto& x) { return 0.0; };
+    const auto neutralFunction = [](const auto&) { return 0.0; };
     auto darcyDirichlet = Dune::PDELab::makeGridFunctionFromCallable(gv_, flowFunction);
     auto dgDirichlet = Dune::PDELab::makeGridFunctionFromCallable(gv_, neutralFunction);
     const auto boundaryGridFunction = Dune::PDELab::CompositeGridFunction(darcyDirichlet, dgDirichlet);

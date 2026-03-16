@@ -28,7 +28,7 @@ public:
     openingHeight_(pTree_.get<RF>("problem.non-parametric.openingHeight")),
     coatingHeight_(pTree_.get<RF>("problem.parametric.coatingHeight")),
     inflowAngle_(pTree_.get<RF>("problem.parametric.inflowAngle")),
-    inflowVelocity_(pTree_.template get<RF>("problem.inflowVelocity", 1.0)),
+    inflowVelocity_(pTree_.template get<RF>("problem.inflowVelocity")),
     halfReactionBlockHeight_(0.5 - openingHeight_ - coatingHeight_)
   {
     // precompute unity tensor
@@ -50,8 +50,7 @@ public:
   auto bctype(const Element& el, const X& x) const
   {
     auto global = el.geometry().global(x);
-    if (((global[0] < tol_) and (global[1] > 1-openingHeight_ - tol_)) or
-        ((global[0] > 1-tol_) and (global[1] < openingHeight_ + tol_))){
+    if ((global[0] > 1-tol_) and (global[1] < openingHeight_ + tol_)){
       return Dune::PDELab::ConvectionDiffusionBoundaryConditions::Dirichlet;
     }
     else
@@ -121,7 +120,7 @@ private:
   RF minPerm_;
   RF coatingPerm_;
   RF openingHeight_;
-  RF coatingHeight_;;
+  RF coatingHeight_;
   RF inflowAngle_;
   RF inflowVelocity_;
   RF halfReactionBlockHeight_;
