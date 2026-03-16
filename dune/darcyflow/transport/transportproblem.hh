@@ -27,6 +27,8 @@ public:
 
   TransportProblem(Dune::ParameterTree& pTree) :
     Base(), pTree_(pTree),
+    coatingReaction_(pTree_.get<RF>("problem.parametric.coatingReaction")),
+    minReaction_(pTree_.get<RF>("problem.parametric.minReaction")),
     openingHeight_(pTree_.get<RF>("problem.non-parametric.openingHeight")),
     coatingHeight_(pTree_.get<RF>("problem.parametric.coatingHeight")),
     halfReactionBlockHeight_(0.5 - openingHeight_ - coatingHeight_)
@@ -34,18 +36,20 @@ public:
 
   void update()
   {
+    coatingReaction_ = pTree_.get<RF>("problem.parametric.coatingReaction");
+    minReaction_ = pTree_.get<RF>("problem.parametric.minReaction");
     coatingHeight_ = pTree_.get<RF>("problem.parametric.coatingHeight");
     halfReactionBlockHeight_ = RF(0.5 - openingHeight_ - coatingHeight_);
   }
 
   template<typename X>
-  bool isLeftOpening(const X& global) const
+  bool isInflowBoundary(const X& global) const
   {
     return (global[0] < tol_) and (global[1] > 1 - openingHeight_ - tol_);
   }
 
   template<typename X>
-  bool isRightOpening(const X& global) const
+  bool isOutflowBoundary(const X& global) const
   {
     return (global[0] > 1 - tol_) and (global[1] < openingHeight_ + tol_);
   }
@@ -53,7 +57,7 @@ public:
   template<typename X>
   bool isOnOpening(const X& global) const
   {
-    return isLeftOpening(global) or isRightOpening(global);
+    return isInflowBoundary(global) or isOutflowBoundary(global);
   }
 
   template<typename Element>
@@ -93,9 +97,9 @@ public:
   auto bctype(const Element& el, const X& x) const
   {
     auto global = el.geometry().global(x);
-    if (isLeftOpening(global))
+    if (isInflowBoundary(global))
       return Dune::PDELab::ConvectionDiffusionBoundaryConditions::Dirichlet;
-    else if (isRightOpening(global))
+    else if (isOutflowBoundary(global))
       return Dune::PDELab::ConvectionDiffusionBoundaryConditions::Outflow;
     else
       return Dune::PDELab::ConvectionDiffusionBoundaryConditions::None;
@@ -119,10 +123,14 @@ public:
   auto c (const Element& el, const X& x) const
   {
     const auto& global = el.geometry().center();
+    const auto identity = typename Traits::RangeType({RF(1.0), RF(1.0)});
     using std::abs;
-    auto d = abs(global[1]-0.5);
-    return typename Traits::RangeType({RF(d <= halfReactionBlockHeight_),
-      RF(d > halfReactionBlockHeight_ and d<=(halfReactionBlockHeight_ + coatingHeight_))});
+    if (abs(global[1] - 0.5) < halfReactionBlockHeight_ + tol_)
+      return minReaction_ * identity;
+    else if (abs(global[1] - 0.5) < halfReactionBlockHeight_ + coatingHeight_ + tol_)
+      return coatingReaction_ * identity;
+    else
+      return identity * 0.0;
   }
 
   // Dirichlet condition
@@ -149,6 +157,8 @@ public:
 private:
   const double tol_ = 1e-10;
   Dune::ParameterTree& pTree_;
+  RF minReaction_;
+  RF coatingReaction_;
   RF openingHeight_;
   RF coatingHeight_;;
   RF halfReactionBlockHeight_;

@@ -40,7 +40,7 @@ int main(int argc, char** argv)
     ParameterSolverType parameterSolver(gv, pTree);
 
     // setup some parameters
-    std::array<double, 5> parameter;
+    std::array<double, 4> parameter;
     parameter[0] = 0.25;
     parameter[1] = 0.25;
     parameter[2] = 0.2;

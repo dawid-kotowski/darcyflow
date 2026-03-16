@@ -23,8 +23,8 @@ public:
 
   DarcyProblem(Dune::ParameterTree& pTree) : Base(),
     pTree_(pTree), I_(0.0),
-    minPerm_(pTree_.get<RF>("problem.parametric.minPermeability")),
-    coatingPerm_(pTree_.get<RF>("problem.parametric.coatingPermeability")),
+    minPerm_(pTree_.get<RF>("problem.non-parametric.minPermeability")),
+    coatingPerm_(pTree_.get<RF>("problem.non-parametric.coatingPermeability")),
     openingHeight_(pTree_.get<RF>("problem.non-parametric.openingHeight")),
     coatingHeight_(pTree_.get<RF>("problem.parametric.coatingHeight")),
     inflowAngle_(pTree_.get<RF>("problem.parametric.inflowAngle")),
@@ -38,8 +38,6 @@ public:
 
   void update()
   {
-    minPerm_ = pTree_.get<RF>("problem.parametric.minPermeability");
-    coatingPerm_ = pTree_.get<RF>("problem.parametric.coatingPermeability");
     coatingHeight_ = pTree_.get<RF>("problem.parametric.coatingHeight");
     inflowAngle_ = pTree_.get<RF>("problem.parametric.inflowAngle");
     halfReactionBlockHeight_ = RF(0.5 - openingHeight_ - coatingHeight_);

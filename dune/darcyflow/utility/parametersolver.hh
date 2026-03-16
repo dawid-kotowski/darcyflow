@@ -64,6 +64,7 @@ public:
 
     // update problems
     darcyProblem_.update();
+    transportProblem_.update();
     adaptedTransportProblem_.update();
 
     // solve problems

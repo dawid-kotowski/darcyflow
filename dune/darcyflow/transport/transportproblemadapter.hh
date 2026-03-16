@@ -23,7 +23,12 @@ public:
   using Traits = typename Base::Traits;
 
   TransportProblemAdapter(const Base& transportProblem, const DGFType& velocityDgf)
-    : Base(transportProblem), transportProblem_(transportProblem), velocityDgf_(&velocityDgf) {}
+    : Base(transportProblem), velocityDgf_(&velocityDgf) {}
+
+  void update()
+  {
+    Base::update();
+  }
 
   void updateDgf(const DGFType& dgf)
   {
@@ -34,7 +39,7 @@ public:
   auto bctype(const Element& el, const X& x) const
   {
     const auto& insidePos = el.geometryInInside().global(x);
-    return transportProblem_.bctype(el.inside(), insidePos);
+    return Base::bctype(el.inside(), insidePos);
   }
 
   template<typename Element, typename X>
@@ -47,7 +52,6 @@ public:
   }
 
 private:
-  const Base& transportProblem_;
   const DGFType* velocityDgf_;
 };
 

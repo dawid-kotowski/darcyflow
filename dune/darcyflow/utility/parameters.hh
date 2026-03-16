@@ -30,10 +30,10 @@ public:
       shiftScale(mu[0], 0.3, 0.0)); // [0, 1] -> [0, 0.3]
     pTree_["problem.parametric.inflowAngle"] = std::to_string(
       shiftScale(mu[1], M_PI, M_PI * -0.5)); // [0, 1] -> [-pi/2, pi/2]
-    pTree_["problem.parametric.minPermeability"] = std::to_string(
-      shiftScale(mu[2], 0.09, 0.01)); // [0, 1] -> [0.01, 0.1]
-    pTree_["problem.parametric.coatingPermeability"] = std::to_string(
-      shiftScale(mu[3], 0.4, 0.1)); // [0, 1] -> [0.1, 0.5]
+    pTree_["problem.parametric.minReaction"] = std::to_string(
+      shiftScale(mu[2], 0.3, 0.3)); // [0, 1] -> [0.3, 0.6]
+    pTree_["problem.parametric.coatingReaction"] = std::to_string(
+      shiftScale(mu[3], 0.2, 0.1)); // [0, 1] -> [0.1, 0.3]
   }
 
   Dune::ParameterTree getParameterTree() const
