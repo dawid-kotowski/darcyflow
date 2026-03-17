@@ -57,10 +57,9 @@ public:
   template<typename Param>
   SolutionType solve(const Param& parameters)
   {
-    // set up parameters into pTree
+    // set up parameters directly into pTree
     ParameterParser parameterParser(pTree_);
     parameterParser.parse(parameters);
-    pTree_ = parameterParser.getParameterTree();
 
     // update problems
     darcyProblem_.update();

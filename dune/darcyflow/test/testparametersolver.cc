@@ -41,10 +41,10 @@ int main(int argc, char** argv)
 
     // setup some parameters
     std::array<double, 4> parameter;
-    parameter[0] = 0.25;
-    parameter[1] = 0.25;
-    parameter[2] = 0.2;
-    parameter[3] = 0.05;
+    parameter[0] = 0.25; // [0, 1] -> [0, 0.3]        | coatingHeight
+    parameter[1] = 0.25; // [0, 1] -> [-pi/2, pi/2]   | inflowAngle   
+    parameter[2] = 0.6;  // [0, 1] -> [0.3, 0.6]      | minReaction 
+    parameter[3] = 0.2; // [0, 1] -> [0.1, 0.3]      | coatingReaction 
     
     // solve for that choice of parameters
     auto solution = parameterSolver.solve(parameter);

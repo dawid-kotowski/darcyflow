@@ -36,13 +36,13 @@ public:
       shiftScale(mu[3], 0.2, 0.1)); // [0, 1] -> [0.1, 0.3]
   }
 
-  Dune::ParameterTree getParameterTree() const
+  const Dune::ParameterTree& getParameterTree() const
   {
     return pTree_;
   }
 
 protected:
-  Dune::ParameterTree pTree_;
+  Dune::ParameterTree& pTree_;
 };
 
 #endif  // DUNE_DARCYFLOW_UTILITY_PARAMETERS_HH
